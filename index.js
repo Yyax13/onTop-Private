@@ -17,8 +17,9 @@ import {
 } from 'discord.js';
 import { findSubdomains } from './misc/sub.js';
 import { z } from 'zod';
-import { logM, logMDelete, logMUpdate } from './misc/mLogger.js';
+import { logM, logMDelete, logMUpdate, fetchLogs } from './misc/mLogger.js';
 import { execSync } from 'child_process';
+import { existsSync, mkdirSync } from 'fs';
 
 const botToken = process.env.DC_BotToken;
 const botClient = new Client({
@@ -53,11 +54,40 @@ const level0 = [
 
 const level1 = [
     ...level0,
+    '1392921582573453392',
+    '1392930078442393710',
+    '1392950631224053770',
+    '1392180120004853760',
+    '1387117649972170844',
+    '1387117654124527656',
+    '1387117652631097506',
+    '1392213017160192083',
+    '1389671571148247222',
+    '1392183190080327971',
+    '1389716338871767101',
+    '1390018166742188093',
 
 ];
 
-const verifyAccessLevel = (userRoles) => {
+const level2 = [
+    ...level1,
+    '1388634625634471996',
+    '1387117659065155587'
+
+];
+
+const verifyAccessLevel0 = (userRoles) => {
     return level0.some(roleId => userRoles.has(roleId));
+
+};
+
+const verifyAccessLevel1 = (userRoles) => {
+    return level1.some(roleId => userRoles.has(roleId));
+
+};
+
+const verifyAccessLevel2 = (userRoles) => {
+    return level2.some(roleId => userRoles.has(roleId));
 
 };
 
@@ -66,6 +96,7 @@ let log = true;
 
 botClient.once(Events.ClientReady, readyClient => {
     console.log(`[?] Logged as ${readyClient.user.tag}`);
+    if (!existsSync('./logs')) mkdirSync('./logs');
 });
 
 const textBox = (message) => { return `\`${message}\``; };
@@ -106,7 +137,7 @@ botClient.on('messageCreate', async (m) => {
         echo: async () => {
             let userId = m.author.id;
             let user = await m.guild.members.fetch(userId);
-            if (!verifyAccessLevel(user.roles.cache)) {
+            if (!verifyAccessLevel0(user.roles.cache)) {
                 return await m.reply("You can't use this");
 
             };
@@ -136,7 +167,7 @@ botClient.on('messageCreate', async (m) => {
         reply: async () => {
             let userId = m.author.id;
             let user = await m.guild.members.fetch(userId);
-            if (!verifyAccessLevel(user.roles.cache)) {
+            if (!verifyAccessLevel0(user.roles.cache)) {
                 return await m.reply("You can't use this");
 
             };
@@ -169,7 +200,7 @@ botClient.on('messageCreate', async (m) => {
         echoembed: async () => {
             let userId = m.author.id;
             let user = await m.guild.members.fetch(userId);
-            if (!verifyAccessLevel(user.roles.cache)) {
+            if (!verifyAccessLevel0(user.roles.cache)) {
                 return await m.reply("You can't use this");
 
             };
@@ -228,7 +259,7 @@ botClient.on('messageCreate', async (m) => {
         prefix: async () => {
             let userId = m.author.id;
             let user = await m.guild.members.fetch(userId);
-            if (!verifyAccessLevel(user.roles.cache)) {
+            if (!verifyAccessLevel0(user.roles.cache)) {
                 return await m.reply("You can't use this");
 
             };
@@ -324,7 +355,7 @@ botClient.on('messageCreate', async (m) => {
         reset: async () => {
             if (m.author.id !== ownerInfo.id) return await m.reply(`You can't use this, just ${ownerInfo.name} can use this`);
 
-            await m.reply('Bot restaring in ten secs (back to default prefix, restart loggin and update commands)');
+            await m.reply('Bot restaring in three secs (back to default prefix, restart loggin and update commands)');
             setTimeout(() => process.exit(0), 1000);
 
         },
@@ -359,6 +390,23 @@ botClient.on('messageCreate', async (m) => {
             }
 
         },
+        fetchlogs: async () => {
+            let userId = m.author.id;
+            let user = await m.guild.members.fetch(userId);
+            if (!verifyAccessLevel2(user.roles.cache)) {
+                m.reply('You can\'t use that');
+
+            };
+
+            const deep = verifyAccessLevel1(user.roles.cache);
+            let targetUser = mArgs.shift()?.replace('<', '')?.replace('>', '')?.replace('@', '');
+
+            if (!targetUser) return m.reply(`Command Usage: ${textBox(`${botPrefix}fetchlogs <userID or mention>`)}`);
+            let exists = await m.guild.members.fetch(targetUser).then(success => true).catch(err => false)
+
+            if(exists) return await fetchLogs(targetUser, m, deep); return await m.reply('User not found');
+
+        },
         help: async () => {
             let helpEmbed = embedCreator('Avaliable Commands', 'A list of all avaliable commands')
                 .addFields(
@@ -366,6 +414,7 @@ botClient.on('messageCreate', async (m) => {
                     { name: `[STABLE] ${botPrefix}echo`, value: 'Send any message to the channel that you choose' },
                     { name: `[STABLE] ${botPrefix}b64`, value: 'Base64 encode & decode' },
                     { name: `[BETA] ${botPrefix}subs`, value: 'Subdomain finder with 3 levels (low, mid, high)' },
+                    { name: `[BETA] ${botPrefix}fetchlogs`, value: 'Fetch all logs from any user' },
                     { name: `[INFO] ${botPrefix}sudohelper`, value: `Show an menu like this, but with commands that only the staff and/or the owner can use (e.g.: ${textBox(`${botPrefix}reset`)})` },
                     { name: `[INFO] ${botPrefix}help`, value: 'Show this menu' }
                 );
@@ -376,7 +425,7 @@ botClient.on('messageCreate', async (m) => {
         sudohelper: async () => {
             let userId = m.author.id;
             let user = await m.guild.members.fetch(userId);
-            if (!verifyAccessLevel(user.roles.cache)) {
+            if (!verifyAccessLevel0(user.roles.cache)) {
                 return await m.reply("You can't use this");
 
             };
@@ -384,7 +433,7 @@ botClient.on('messageCreate', async (m) => {
             let helpEmbed = embedCreator('Avaliable Commands', 'A list of all avaliable commands')
                 .addFields(
                     { name: `[STABLE] ${botPrefix}prefix`, value: 'Change the bot prefix' },
-                    { name: `[STABLE] ${botPrefix}reset`, value: 'Reset the bot in ten seconds (back to the default prefix ( t? ), patch to any update and turn on logs' },
+                    { name: `[STABLE] ${botPrefix}reset`, value: 'Reset the bot in three seconds (back to the default prefix ( t? ), patch to any update and turn on logs' },
                     { name: `[STABLE] ${botPrefix}turnlogs`, value: 'Turn the server logs on/off' },
                     { name: `[BETA] ${botPrefix}cmd`, value: 'Execute bash commands in bot\'s host' },
                     { name: `[INFO] ${botPrefix}sudohelper`, value: 'Show this menu' }

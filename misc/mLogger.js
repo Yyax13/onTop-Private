@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import fsPromises from 'fs/promises';
 import fs from 'fs';
 import { log } from './logger.js';
+import { AttachmentBuilder } from 'discord.js';
 
 const supportedHashes = crypto.getHashes();
 
@@ -184,11 +185,55 @@ async function logMUpdate(oldM, newM) {
     
 };
 
-async function fetchLogs(userId, deep=false) {
-    if (!fs.existsSync(`./logs/${userId}`)) return `That user haven't logs yet :)`;
+async function fetchLogs(userId, m, deep=false) {
+    if (!fs.existsSync(`./logs/${userId}.log`)) return await m.reply(`That user haven't logs yet :)`);
 
-    const logFileData = await fsPromises.readFile(`./logs/${userId}`, { encoding: 'utf8' });
-    const messageFileData = await fsPromises.readFile(`./logs/messages/${userId}`, { encoding: 'utf8' });
+    const logFileData = await fsPromises.readFile(`./logs/${userId}.log`);
+    const user = await m.guild.members.fetch(userId);
+    const username = user.user.username;
+
+    if (!deep) {
+        try {
+            await m.author.send({
+                files: [
+                    new AttachmentBuilder(Buffer.from(logFileData), {
+                        name: `${userId}.log` 
+                    })
+
+                ]
+
+            });
+            return await m.reply(`Successfuly sent the log in your DM :)`)
+            
+        } catch (err) {
+            return await m.reply(`Some error occured during log send, make shure that your DM is open`);
+
+        };
+    };
+    
+    const messagesFileData = fs.existsSync(`./logs/messages/${userId}.log`) ? await fsPromises.readFile(`./logs/messages/${userId}.log`) : Buffer.from(`User ${username} haven't this type of log`);
+    const updatesFileData = fs.existsSync(`./logs/updates/${userId}.log`) ? await fsPromises.readFile(`./logs/updates/${userId}.log`) : Buffer.from(`User ${username} haven't this type of log`);
+    const deletesFileData = fs.existsSync(`./logs/deletes/${userId}.log`) ? await fsPromises.readFile(`./logs/deletes/${userId}.log`) : Buffer.from(`User ${username} haven't this type of log`);
+
+    try {
+        await m.author.send({
+            files: [
+                new AttachmentBuilder(Buffer.from(logFileData, 'utf8'), { name: `${userId}.log` }),
+                new AttachmentBuilder(Buffer.from(messagesFileData, 'utf8'), { name: `messages.log` }),
+                new AttachmentBuilder(Buffer.from(updatesFileData, 'utf8'), { name: `updates.log` }),
+                new AttachmentBuilder(Buffer.from(deletesFileData, 'utf8'), { name: `deletes.log` })
+
+            ]
+
+        });
+        return await m.reply(`Successfuly sent all the logs in your DM :)`)
+        
+    } catch (err) {
+        console.error(err);
+        return await m.reply(`Some error occured during logs send, make shure that your DM is open`);
+
+    };
+
 };
 
-export {logM, logMDelete, logMUpdate};
+export { logM, logMDelete, logMUpdate, fetchLogs };
