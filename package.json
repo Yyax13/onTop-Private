@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev": "bash run.sh"
+    "start": "bash -i run.sh"
   },
   "author": "",
   "license": "MIT",

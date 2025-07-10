@@ -1,11 +1,10 @@
 while true; do
     NODE_OPTIONS=--openssl-legacy-provider node .
-    echo "Bot caiu... reiniciando em 5 segundos"
-    sleep 5
+    echo "Bot caiu... reiniciando em 3 segundos"
+    sleep 1
     clear
     echo "instalando dependencias"
-    nvm use && npm i
-    sleep 4
+    npm i
     clear
     echo "Bot iniciado"
 done
