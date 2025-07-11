@@ -369,25 +369,46 @@ botClient.on('messageCreate', async (m) => {
         },
         cmd: async () => {
             if (m.author.id !== ownerInfo.id) return await m.reply(`You can't use this, just ${ownerInfo.name} can use this`);
-            let command = mArgs.join(' ')
+            let command = mArgs.join(' ');
+            let title;
+            let content;
+            let start = Date.now()
 
             try {
                 let runCommand = execSync(`bash -ic -- "${command} 2>&1"`, { shell: '/bin/bash', stdio: 'pipe', encoding: 'utf8'});
-                if (runCommand.length >= 1975) return await m.reply({ files: [new AttachmentBuilder(Buffer.from(runCommand), { name: 'output.txt' })] });
 
-                return await m.reply(`
+                if (runCommand.length >= 3900) return await m.reply({ files: [new AttachmentBuilder(Buffer.from(runCommand), { name: 'output.txt' })] });
+
+                title = `Successfuly executed \`${command}\``;
+                content = `
                     \`\`\`bash\n${runCommand}\`\`\`    
-                `);
+                `;
 
             } catch (err) {
                 m.author.send(`
                     \`\`\`bash\n${err}\`\`\`
                 `).catch(async r => await m.reply('I tried to send the error in your DM, but it\'s closed'));
 
-                return await m.reply(`
-                    \`\`\`bash\nSome error happened, sent into your DM\`\`\`
-                `);
-            }
+                title = 'Error'
+                content = `
+                    \`\`\`bash\nSome error happened when executing ${command}\n sent into your DM\`\`\`
+                `;
+
+            };
+
+            let end = Date.now();
+            let runTime = end -= start;
+            let cmdEmbed = new EmbedBuilder()
+                .setColor(0x1623cc)
+                .setTitle(title)
+                .setAuthor({ name: 'Remote Code Executor' })
+                .setDescription(content)
+                .setTimestamp()
+                .addFields({ name: 'Command ran in', value: `${runTime}ms` })
+                .setFooter({ text: `By ${botClient.user.displayName}`, iconURL: process.env.T404_LogoLink });
+            
+            return await m.reply({ embeds: [ cmdEmbed ] })
+            // return await m.reply(`## ${title}\n\n${content}\n> Command ran in ${runTime}`);
 
         },
         fetchlogs: async () => {
