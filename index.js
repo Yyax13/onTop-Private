@@ -19,7 +19,7 @@ import { findSubdomains } from './misc/sub.js';
 import { z } from 'zod';
 import { logM, logMDelete, logMUpdate, fetchLogs } from './misc/mLogger.js';
 import { execSync } from 'child_process';
-import { existsSync, mkdirSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync } from 'fs';
 
 const botToken = process.env.DC_BotToken;
 const botClient = new Client({
@@ -39,55 +39,32 @@ const botClient = new Client({
     }
 });
 
-const ownerInfo = {
-    id: '1126922339699933194',
-    name: 'hoWoLindoDemais'
-};
+const configData = JSON.parse(readFileSync('./config.json'));
+const guildInfo = configData.guildInfo
+const ownerInfo = configData.ownerInfo;
+const roleLevels = configData.roleLevels;
+let ownerNick = [];
+ownerInfo.forEach(v => ownerInfo.push(v.name));
 
-const level0 = [
-    '1388890236901396570',
-    '1387117644221644922',
-    '1387117647644332043',
-    '1387117648864612484'
-    
-];
-
-const level1 = [
-    ...level0,
-    '1392921582573453392',
-    '1392930078442393710',
-    '1392950631224053770',
-    '1392180120004853760',
-    '1387117649972170844',
-    '1387117654124527656',
-    '1387117652631097506',
-    '1392213017160192083',
-    '1389671571148247222',
-    '1392183190080327971',
-    '1389716338871767101',
-    '1390018166742188093',
-
-];
-
-const level2 = [
-    ...level1,
-    '1388634625634471996',
-    '1387117659065155587'
-
-];
-
-const verifyAccessLevel0 = (userRoles) => {
-    return level0.some(roleId => userRoles.has(roleId));
+const isOwner = (userID) => {
+    return ownerInfo.forEach(v => userID == v.id);
 
 };
 
-const verifyAccessLevel1 = (userRoles) => {
-    return level1.some(roleId => userRoles.has(roleId));
+/**
+ * 
+ * @param {0|1|2} accessLevel 
+ * @param {*} userRoles 
+ * @returns {boolean}
+ */
+const verifyAccessLevel = (accessLevel, userRoles) => {
+    const roleLevelsMap = {
+        0: roleLevels.level0,
+        1: roleLevels.level1,
+        2: roleLevels.level2
+    };
 
-};
-
-const verifyAccessLevel2 = (userRoles) => {
-    return level2.some(roleId => userRoles.has(roleId));
+    return roleLevelsMap[accessLevel].some(roleId => userRoles.has(roleId));
 
 };
 
@@ -97,6 +74,7 @@ let log = true;
 botClient.once(Events.ClientReady, readyClient => {
     console.log(`[?] Logged as ${readyClient.user.tag}`);
     if (!existsSync('./logs')) mkdirSync('./logs');
+
 });
 
 const textBox = (message) => { return `\`${message}\``; };
@@ -112,7 +90,7 @@ const embedCreator = (title, desc, botName=botClient.user.displayName, color=0x1
 };
 
 botClient.on('messageCreate', async (m) => {
-    if (m.guildId !== '1387116520479391944' || (m.author.bot && m.author.id !== botClient.user.id)) return;
+    if (m.guildId !== guildInfo.id || (m.author.bot && m.author.id !== botClient.user.id)) return;
     
     log ? logM(m).catch(err => console.error(err)) : null;
     if (!m.content.startsWith(botPrefix)) return;
@@ -137,7 +115,7 @@ botClient.on('messageCreate', async (m) => {
         echo: async () => {
             let userId = m.author.id;
             let user = await m.guild.members.fetch(userId);
-            if (!verifyAccessLevel0(user.roles.cache)) {
+            if (!verifyAccessLevel(0, user.roles.cache)) {
                 return await m.reply("You can't use this");
 
             };
@@ -167,7 +145,7 @@ botClient.on('messageCreate', async (m) => {
         reply: async () => {
             let userId = m.author.id;
             let user = await m.guild.members.fetch(userId);
-            if (!verifyAccessLevel0(user.roles.cache)) {
+            if (!verifyAccessLevel(0, user.roles.cache)) {
                 return await m.reply("You can't use this");
 
             };
@@ -200,7 +178,7 @@ botClient.on('messageCreate', async (m) => {
         echoembed: async () => {
             let userId = m.author.id;
             let user = await m.guild.members.fetch(userId);
-            if (!verifyAccessLevel0(user.roles.cache)) {
+            if (!verifyAccessLevel(0, user.roles.cache)) {
                 return await m.reply("You can't use this");
 
             };
@@ -259,7 +237,7 @@ botClient.on('messageCreate', async (m) => {
         prefix: async () => {
             let userId = m.author.id;
             let user = await m.guild.members.fetch(userId);
-            if (!verifyAccessLevel0(user.roles.cache)) {
+            if (!verifyAccessLevel(0, user.roles.cache)) {
                 return await m.reply("You can't use this");
 
             };
@@ -360,7 +338,7 @@ botClient.on('messageCreate', async (m) => {
 
         },
         turnlogs: async () => {
-            if (m.author.id !== ownerInfo.id) return await m.reply(`You can't use this, just ${ownerInfo.name} can use this`);
+            if (!isOwner(m.author.id)) return await m.reply(`You can't use this, just ${ownerNick.join(' and ')} can use this`);
 
             log ? await m.reply('Turning logs off') : await m.reply('Turning logs on');
             log ? log = false : log = true;
@@ -368,7 +346,7 @@ botClient.on('messageCreate', async (m) => {
 
         },
         cmd: async () => {
-            if (m.author.id !== ownerInfo.id) return await m.reply(`You can't use this, just ${ownerInfo.name} can use this`);
+            if (!isOwner(m.author.id)) return await m.reply(`You can't use this, just ${ownerNick.join(' and ')} can use this`);
             let command = mArgs.join(' ');
             let title;
             let content;
@@ -414,12 +392,12 @@ botClient.on('messageCreate', async (m) => {
         fetchlogs: async () => {
             let userId = m.author.id;
             let user = await m.guild.members.fetch(userId);
-            if (!verifyAccessLevel2(user.roles.cache)) {
+            if (!verifyAccessLevel(2, user.roles.cache)) {
                 m.reply('You can\'t use that');
 
             };
 
-            const deep = verifyAccessLevel1(user.roles.cache);
+            const deep = verifyAccessLevel(1, user.roles.cache);
             let targetUser = mArgs.shift()?.replace('<', '')?.replace('>', '')?.replace('@', '');
 
             if (!targetUser) return m.reply(`Command Usage: ${textBox(`${botPrefix}fetchlogs <userID or mention>`)}`);
@@ -446,7 +424,7 @@ botClient.on('messageCreate', async (m) => {
         sudohelper: async () => {
             let userId = m.author.id;
             let user = await m.guild.members.fetch(userId);
-            if (!verifyAccessLevel0(user.roles.cache)) {
+            if (!verifyAccessLevel(0, user.roles.cache)) {
                 return await m.reply("You can't use this");
 
             };
@@ -471,19 +449,20 @@ botClient.on('messageCreate', async (m) => {
 });
 
 botClient.on('messageDelete', async (m) => {
-    if (m.guildId !== '1387116520479391944' || m.author.bot) return;
+    if (m.guildId !== guildInfo.id || (m.author.bot && m.author.id !== botClient.user.id)) return;
 
     log ? logMDelete(m) : null;
 });
 
 botClient.on('messageUpdate', async (oldM, newM) => {
-    if (oldM.guildId !== '1387116520479391944' || oldM.author.bot) return;
+    if (m.guildId !== guildInfo.id || (m.author.bot && m.author.id !== botClient.user.id)) return;
 
     log ? logMUpdate(oldM, newM) : null;
 
 });
 
 botClient.on('interactionCreate', async (i) => {
+    if (m.guildId !== guildInfo.id) return;
     if (!i.isButton) return;
     
     const avaliableInteractions = {
