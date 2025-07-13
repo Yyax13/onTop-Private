@@ -46,6 +46,9 @@ const roleLevels = configData.roleLevels;
 let ownerNick = [];
 ownerInfo.forEach(v => ownerInfo.push(v.name));
 
+let botPrefix = "t?";
+let log = true;
+
 const isOwner = (userID) => {
     return ownerInfo.forEach(v => userID == v.id);
 
@@ -67,9 +70,6 @@ const verifyAccessLevel = (accessLevel, userRoles) => {
     return roleLevelsMap[accessLevel].some(roleId => userRoles.has(roleId));
 
 };
-
-let botPrefix = "t?"; // t404&¨¬
-let log = true;
 
 botClient.once(Events.ClientReady, readyClient => {
     console.log(`[?] Logged as ${readyClient.user.tag}`);
